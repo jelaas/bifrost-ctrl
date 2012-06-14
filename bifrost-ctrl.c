@@ -42,6 +42,8 @@ clients must be made or how a client should react.
 #include <sys/ioctl.h>
 #include <linux/usbdevice_fs.h>
 #include <errno.h>
+#include <syscall.h>
+#define unshare(flags) ((long)syscall(SYS_unshare, flags))
 
 #include "des.h"
 #include "md5_crypt.h"
