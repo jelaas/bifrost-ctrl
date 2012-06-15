@@ -192,9 +192,9 @@ static int usbresetdev(ssh_channel chan, const char *filename)
 			ssh_msg(chan, "reset failed: ");
 			ssh_msg(chan, strerror(errno));
 			ssh_msg(chan, "\r\n");
+			close(fd);
+			return 1;
 		}
-		close(fd);
-		return 1;
 	}
 	if(conf.debug) printf("Reset OK %s\n", filename);
 	ssh_msg(chan, "[USB] ");
