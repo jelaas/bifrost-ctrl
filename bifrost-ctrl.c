@@ -219,6 +219,8 @@ static int usbreset(ssh_channel chan)
 				if(conf.debug) printf("reset %s\n", fn);
 				usbresetdev(chan, fn);
 				count++;
+			} else {
+				if(conf.debug) printf("stat: %s\n", strerror(errno));
 			}
 		}
 	}
