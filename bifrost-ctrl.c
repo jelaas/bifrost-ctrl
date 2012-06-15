@@ -176,7 +176,7 @@ static int usbresetdev(ssh_channel chan, const char *filename)
 	
 	fd = open(filename, O_WRONLY);
 	if (fd == -1) {
-		ssh_msg(chan, "INIT: [USB] could not open ");
+		ssh_msg(chan, "[USB] could not open ");
 		ssh_msg(chan, filename);
 		ssh_msg(chan, "\r\n");
 		return 1;
@@ -185,7 +185,7 @@ static int usbresetdev(ssh_channel chan, const char *filename)
 	rc = ioctl(fd, USBDEVFS_RESET, 0);
 	if (rc == -1) {
 		if(errno != EISDIR) {
-			ssh_msg(chan, "INIT: [USB] ");
+			ssh_msg(chan, "[USB] ");
 			ssh_msg(chan, filename);
 			ssh_msg(chan, "reset failed: ");
 			ssh_msg(chan, strerror(errno));
@@ -194,7 +194,7 @@ static int usbresetdev(ssh_channel chan, const char *filename)
 		close(fd);
 		return 1;
 	}
-	ssh_msg(chan, "INIT: [USB] ");
+	ssh_msg(chan, "[USB] ");
 	ssh_msg(chan, filename);
 	ssh_msg(chan, " reset OK\r\n");
 	
@@ -207,17 +207,20 @@ static int usbreset(ssh_channel chan)
 {
 	char fn[256];
 	struct stat statb;
-	int bus, dev;
+	int bus, dev, count=0;
 	
-	ssh_msg(chan, "INIT: [USB] performing USB reset on all ports\r\n");
+	ssh_msg(chan, "[USB] performing USB reset on all ports\r\n");
 	
 	for(bus=1;bus<10;bus++) {
 		for(dev=1;dev<10;dev++) {
 			sprintf(fn, "/dev/bus/usb/%03d/%03d", bus, dev);
-			if(stat(fn, &statb)==0)
+			if(stat(fn, &statb)==0) {
 				usbresetdev(chan, fn);
+				count++;
+			}
 		}
 	}
+	ssh_msg(chan, "[USB] reset attempted on %d devices.\r\n", count);
 	return 0;
 }
 
@@ -438,7 +441,7 @@ int main(int argc, char **argv){
 				    if(strncmp(line, "quit", 4)==0)
 					    break;
 				    if(strncmp(line, "help", 4)==0) {
-					    char *s = "Available commands:\n"
+					    char *s = "Available commands:\r\n"
 						    "exit|quit\r\n"
 						    "dmesg\r\n"
 						    "reboot\r\n"
