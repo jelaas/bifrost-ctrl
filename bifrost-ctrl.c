@@ -139,23 +139,35 @@ static int copyfile(const char *src, const char *dst)
 
 static void do_reboot(ssh_channel chan)
 {
-	char *s = "Reboot...\n";
+	char *s = "Reboot...\r\n";
 	ssh_channel_write(chan, s, strlen(s));
 	reboot(RB_AUTOBOOT);
-	s = "Looks like  the reboot failed..\n";
+	s = "Looks like  the reboot failed..\r\n";
 	ssh_channel_write(chan, s, strlen(s));
 }
 
 static void dmesg(ssh_channel chan)
 {
 	int got;
-	char buf[KBUFSIZE];
+	char *p, *ep, buf[KBUFSIZE];
 	
 	got = klogctl(3, buf, sizeof(buf)-1);
 	if(got < 0)
 		return;
 	buf[got] = 0;
-	ssh_channel_write(chan, buf, got);
+
+	/* insert carriage returns */
+	p = buf;
+	while(*p) {
+		ep = strchr(p, '\n');
+		if(!ep) {
+			ssh_msg(chan, p);
+			break;
+		}
+		ssh_channel_write(chan, p, ep-p);
+		ssh_msg(chan, "\r\n");
+		p = ep+1;
+	}
 }
 
 static int usbresetdev(ssh_channel chan, const char *filename)
@@ -166,7 +178,7 @@ static int usbresetdev(ssh_channel chan, const char *filename)
 	if (fd == -1) {
 		ssh_msg(chan, "INIT: [USB] could not open ");
 		ssh_msg(chan, filename);
-		ssh_msg(chan, "\n");
+		ssh_msg(chan, "\r\n");
 		return 1;
 	}
 	
@@ -177,13 +189,14 @@ static int usbresetdev(ssh_channel chan, const char *filename)
 			ssh_msg(chan, filename);
 			ssh_msg(chan, "reset failed: ");
 			ssh_msg(chan, strerror(errno));
+			ssh_msg(chan, "\r\n");
 		}
 		close(fd);
 		return 1;
 	}
 	ssh_msg(chan, "INIT: [USB] ");
 	ssh_msg(chan, filename);
-	ssh_msg(chan, " reset OK\n");
+	ssh_msg(chan, " reset OK\r\n");
 	
 	close(fd);
 	return 0;
@@ -196,7 +209,7 @@ static int usbreset(ssh_channel chan)
 	struct stat statb;
 	int bus, dev;
 	
-	ssh_msg(chan, "INIT: [USB] performing USB reset on all ports\n");
+	ssh_msg(chan, "INIT: [USB] performing USB reset on all ports\r\n");
 	
 	for(bus=1;bus<10;bus++) {
 		for(dev=1;dev<10;dev++) {
@@ -426,11 +439,11 @@ int main(int argc, char **argv){
 					    break;
 				    if(strncmp(line, "help", 4)==0) {
 					    char *s = "Available commands:\n"
-						    "exit|quit\n"
-						    "dmesg\n"
-						    "reboot\n"
-						    "usbreset\n"
-						    "sync\n";
+						    "exit|quit\r\n"
+						    "dmesg\r\n"
+						    "reboot\r\n"
+						    "usbreset\r\n"
+						    "sync\r\n";
 					    ssh_channel_write(chan, s, strlen(s));
 				    }
 				    if(strncmp(line, "dmesg", 5)==0)
@@ -438,9 +451,9 @@ int main(int argc, char **argv){
 				    if(strncmp(line, "reboot", 6)==0)
 					    do_reboot(chan);
 				    if(strncmp(line, "sync", 4)==0) {
-					    ssh_msg(chan, "Syncing filesystems..\n");
+					    ssh_msg(chan, "Syncing filesystems..\r\n");
 					    sync();
-					    ssh_msg(chan, "Done\n");
+					    ssh_msg(chan, "Done\r\n");
 				    }
 				    if(strncmp(line, "usbreset", 8)==0)
 					    usbreset(chan);
