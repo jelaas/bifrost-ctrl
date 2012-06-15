@@ -220,7 +220,7 @@ static int usbreset(ssh_channel chan)
 			}
 		}
 	}
-	ssh_msg(chan, "[USB] reset attempted on %d devices.\r\n", count);
+	ssh_msg(chan, "[USB] reset done.\r\n");
 	return 0;
 }
 
