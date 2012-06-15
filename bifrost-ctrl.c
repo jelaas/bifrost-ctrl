@@ -406,14 +406,19 @@ int main(int argc, char **argv){
 	    while(1) {
 		    if(conf.debug) printf("%d waiting for input from channel\n", getpid());
 		    i=ssh_channel_read(chan,buf, sizeof(buf)-1, 0);
-		    if(conf.debug) printf("%d received input from channel: %d\n", getpid(), i);
+		    if(conf.debug) printf("%d received input from channel: %d [line length = %d]\n", getpid(), i, strlen(line));
 		    if(i>0) {
 			    buf[i] = 0;
-			    if(strlen(line)+strlen(buf) < sizeof(line))
+			    if(strlen(line)+strlen(buf) < sizeof(line)) {
 				    strcat(line, buf);
-			    else
+				    if(conf.debug) printf("%d line buffer now: '%s'\n", getpid(), line);
+			    } else {
 				    line[0] = 0;
-			    if(strchr(line, '\n')) {
+			    }
+			    
+			    if(i==1) ssh_channel_write(chan, buf, 1);
+			    
+			    if(strchr(line, '\n') || strchr(line, '\r')) {
 				    if(conf.debug) printf("%d line: '%s'\n", getpid(), line);
 				    if(strncmp(line, "exit", 4)==0)
 					    break;
