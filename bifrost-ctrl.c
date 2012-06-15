@@ -60,6 +60,7 @@ clients must be made or how a client should react.
 struct {
 	char *port;
 	int daemonize;
+	int debug;
 } conf;
 
 static int ssh_msg(ssh_channel chan, const char *s)
@@ -228,6 +229,8 @@ int main(int argc, char **argv){
 
     if(argc > 1 && !strcmp(argv[1], "-d"))
 	    conf.daemonize = 1;
+    if(argc > 1 && !strcmp(argv[1], "-D"))
+	    conf.debug = 1;
     if(argc > 1 && !strcmp(argv[1], "-h")) {
 	    printf("bifrost-ctrl [-d] [-h]\n");
 	    exit(0);
@@ -314,7 +317,9 @@ int main(int argc, char **argv){
 	    }
 	    if(pid == -1) continue;
 	    
+	    if(conf.debug) printf("%d about to do accept\n", getpid());
 	    r=ssh_bind_accept(sshbind,session);
+	    if(conf.debug) printf("%d accept done\n", getpid());
 	    close(serverfd);
 	    if(r==SSH_ERROR){
 //		    printf("error accepting a connection : %s\n",ssh_get_error(sshbind));
@@ -325,6 +330,7 @@ int main(int argc, char **argv){
 		    _exit(1);
 	    }
 	    do {
+		    if(conf.debug) printf("%d waiting for message (preauth)\n", getpid());
 		    message=ssh_message_get(session);
 		    if(!message)
 			    break;
@@ -356,6 +362,7 @@ int main(int argc, char **argv){
 		    _exit(1);
 	    }
 	    do {
+		    if(conf.debug) printf("%d waiting for message (postauth)\n", getpid());
 		    message=ssh_message_get(session);
 		    if(message){
 			    switch(ssh_message_type(message)){
@@ -375,6 +382,7 @@ int main(int argc, char **argv){
 		    _exit(1);
 	    }
 	    do {
+		    if(conf.debug) printf("%d waiting for message (postauth2)\n", getpid());
 		    message=ssh_message_get(session);
 		    if(message && ssh_message_type(message)==SSH_REQUEST_CHANNEL &&
 		       ssh_message_subtype(message)==SSH_CHANNEL_REQUEST_SHELL){
@@ -392,7 +400,9 @@ int main(int argc, char **argv){
 	    if(!sftp){
 		    _exit(1);
 	    }
+	    ssh_msg(chan, "Login complete.\n");
 	    while(1) {
+		    if(conf.debug) printf("%d waiting for input from channel\n", getpid());
 		    i=ssh_channel_read(chan,buf, 2048, 0);
 		    if(i>0) {
 			    if(strncmp(buf, "exit", 4)==0)
@@ -404,6 +414,7 @@ int main(int argc, char **argv){
 					    "exit|quit\n"
 					    "dmesg\n"
 					    "reboot\n"
+					    "usbreset\n"
 					    "sync\n";
 				    ssh_channel_write(chan, s, strlen(s));
 			    }
