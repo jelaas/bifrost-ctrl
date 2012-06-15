@@ -402,7 +402,7 @@ int main(int argc, char **argv){
 	    if(!sftp){
 		    _exit(1);
 	    }
-	    ssh_msg(chan, "Login complete.\n");
+	    ssh_msg(chan, "Login complete.\r\n");
 	    while(1) {
 		    if(conf.debug) printf("%d waiting for input from channel\n", getpid());
 		    i=ssh_channel_read(chan,buf, sizeof(buf)-1, 0);
@@ -414,6 +414,7 @@ int main(int argc, char **argv){
 			    else
 				    line[0] = 0;
 			    if(strchr(line, '\n')) {
+				    if(conf.debug) printf("%d line: '%s'\n", getpid(), line);
 				    if(strncmp(line, "exit", 4)==0)
 					    break;
 				    if(strncmp(line, "quit", 4)==0)
