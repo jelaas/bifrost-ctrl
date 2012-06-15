@@ -176,6 +176,7 @@ static int usbresetdev(ssh_channel chan, const char *filename)
 	
 	fd = open(filename, O_WRONLY);
 	if (fd == -1) {
+		if(conf.debug) printf("Failed to open %s\n", filename);
 		ssh_msg(chan, "[USB] could not open ");
 		ssh_msg(chan, filename);
 		ssh_msg(chan, "\r\n");
@@ -184,6 +185,7 @@ static int usbresetdev(ssh_channel chan, const char *filename)
 	
 	rc = ioctl(fd, USBDEVFS_RESET, 0);
 	if (rc == -1) {
+		if(conf.debug) printf("Reset failed: %s: %s\n", filename, strerror(errno));
 		if(errno != EISDIR) {
 			ssh_msg(chan, "[USB] ");
 			ssh_msg(chan, filename);
@@ -194,6 +196,7 @@ static int usbresetdev(ssh_channel chan, const char *filename)
 		close(fd);
 		return 1;
 	}
+	if(conf.debug) printf("Reset OK %s\n", filename);
 	ssh_msg(chan, "[USB] ");
 	ssh_msg(chan, filename);
 	ssh_msg(chan, " reset OK\r\n");
