@@ -214,12 +214,15 @@ static int usbreset(ssh_channel chan)
 	for(bus=1;bus<10;bus++) {
 		for(dev=1;dev<10;dev++) {
 			sprintf(fn, "/dev/bus/usb/%03d/%03d", bus, dev);
+			if(conf.debug) printf("usb fn = %s\n", fn);
 			if(stat(fn, &statb)==0) {
+				if(conf.debug) printf("reset %s\n", fn);
 				usbresetdev(chan, fn);
 				count++;
 			}
 		}
 	}
+	if(conf.debug) printf("attempted reset on %d devices\n", count);
 	ssh_msg(chan, "[USB] reset done.\r\n");
 	return 0;
 }
