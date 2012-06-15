@@ -219,12 +219,14 @@ int main(int argc, char **argv){
     ssh_message message;
     ssh_channel chan=0;
     char buf[2048];
+    char line[256];
     int auth=0;
     int sftp=0;
     int i;
     int r;
     int serverfd, rc;
 
+    line[0] = 0;
     conf.port = "23";
 
     if(argc > 1 && !strcmp(argv[1], "-d"))
@@ -403,32 +405,41 @@ int main(int argc, char **argv){
 	    ssh_msg(chan, "Login complete.\n");
 	    while(1) {
 		    if(conf.debug) printf("%d waiting for input from channel\n", getpid());
-		    i=ssh_channel_read(chan,buf, 2048, 0);
+		    i=ssh_channel_read(chan,buf, sizeof(buf)-1, 0);
+		    if(conf.debug) printf("%d received input from channel: %d\n", getpid(), i);
 		    if(i>0) {
-			    if(strncmp(buf, "exit", 4)==0)
-				    break;
-			    if(strncmp(buf, "quit", 4)==0)
-				    break;
-			    if(strncmp(buf, "help", 4)==0) {
-				    char *s = "Available commands:\n"
-					    "exit|quit\n"
-					    "dmesg\n"
-					    "reboot\n"
-					    "usbreset\n"
-					    "sync\n";
-				    ssh_channel_write(chan, s, strlen(s));
+			    buf[i] = 0;
+			    if(strlen(line)+strlen(buf) < sizeof(line))
+				    strcat(line, buf);
+			    else
+				    line[0] = 0;
+			    if(strchr(line, '\n')) {
+				    if(strncmp(line, "exit", 4)==0)
+					    break;
+				    if(strncmp(line, "quit", 4)==0)
+					    break;
+				    if(strncmp(line, "help", 4)==0) {
+					    char *s = "Available commands:\n"
+						    "exit|quit\n"
+						    "dmesg\n"
+						    "reboot\n"
+						    "usbreset\n"
+						    "sync\n";
+					    ssh_channel_write(chan, s, strlen(s));
+				    }
+				    if(strncmp(line, "dmesg", 5)==0)
+					    dmesg(chan);
+				    if(strncmp(line, "reboot", 6)==0)
+					    do_reboot(chan);
+				    if(strncmp(line, "sync", 4)==0) {
+					    ssh_msg(chan, "Syncing filesystems..\n");
+					    sync();
+					    ssh_msg(chan, "Done\n");
+				    }
+				    if(strncmp(line, "usbreset", 8)==0)
+					    usbreset(chan);
+				    line[0] = 0;
 			    }
-			    if(strncmp(buf, "dmesg", 5)==0)
-				    dmesg(chan);
-			    if(strncmp(buf, "reboot", 6)==0)
-				    do_reboot(chan);
-			    if(strncmp(buf, "sync", 4)==0) {
-				    ssh_msg(chan, "Syncing filesystems..\n");
-				    sync();
-				    ssh_msg(chan, "Done\n");
-			    }
-			    if(strncmp(buf, "usbreset", 8)==0)
-				    usbreset(chan);
 		    }
 	    }
 	    ssh_disconnect(session);
